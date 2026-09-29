@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Historique - Supervision{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">📈 Historique des vérifications</h1>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label for="equipement_id" class="form-label">Équipement</label>
+                <select class="form-select" id="equipement_id" name="equipement_id">
+                    <option value="">Tous les équipements</option>
+                    {% for equip in equipements %}
+                        <option value="{{ equip.id }}" {% if equip.id == equipement_id %}selected{% endif %}>
+                            {{ equip.nom }} ({{ equip.adresse_ip }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="jours" class="form-label">Période</label>
+                <select class="form-select" id="jours" name="jours">
+                    <option value="1" {% if jours == 1 %}selected{% endif %}>Dernières 24h</option>
+                    <option value="7" {% if jours == 7 %}selected{% endif %}>7 derniers jours</option>
+                    <option value="30" {% if jours == 30 %}selected{% endif %}>30 derniers jours</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">🔍 Filtrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Statistiques rapides -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card text-white bg-info">
+            <div class="card-body text-center">
+                <h5>Total vérifications</h5>
+                <h2>{{ historiques|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-white bg-success">
+            <div class="card-body text-center">
+                <h5>Taux de disponibilité</h5>
+                <h2>
+                    {% set dispo = historiques|selectattr('disponible')|list|length %}
+                    {% if historiques|length > 0 %}
+                        {{ "%.1f"|format(dispo / historiques|length * 100) }}%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tableau historique -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">📋 Détail des vérifications</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Date/Heure</th>
+                        <th>Équipement</th>
+                        <th>IP</th>
+                        <th>Statut</th>
+                        <th>Temps réponse</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for h in historiques %}
+                    <tr>
+                        <td>{{ h.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td><strong>{{ h.equipement.nom }}</strong></td>
+                        <td><code>{{ h.equipement.adresse_ip }}</code></td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if h.disponible else 'danger' }}">
+                                {{ '🟢 En ligne' if h.disponible else '🔴 Hors ligne' }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if h.temps_reponse %}
+                                <span class="badge bg-info">{{ h.temps_reponse }} ms</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            Aucun historique trouvé pour ces critères
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Supervision{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">📊 Tableau de bord</h1>
+
+<!-- Statistiques -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary stat-card">
+            <div class="card-body">
+                <div class="stat-icon">🖥️</div>
+                <h5>Total équipements</h5>
+                <h2>{{ stats.total }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success stat-card">
+            <div class="card-body">
+                <div class="stat-icon">🟢</div>
+                <h5>En ligne</h5>
+                <h2>{{ stats.actifs }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger stat-card">
+            <div class="card-body">
+                <div class="stat-icon">🔴</div>
+                <h5>Hors ligne</h5>
+                <h2>{{ stats.inactifs }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info stat-card">
+            <div class="card-body">
+                <div class="stat-icon">📈</div>
+                <h5>Disponibilité</h5>
+                <h2>{{ "%.1f"|format(stats.taux_disponibilite) }}%</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alertes non lues -->
+{% if alertes %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                <span>🔔 Alertes récentes ({{ alertes|length }})</span>
+                <button class="btn btn-sm btn-light" onclick="marquerToutesLues()">
+                    ✓ Tout marquer comme lu
+                </button>
+            </div>
+            <div class="card-body">
+                {% for alerte in alertes %}
+                    <div class="alert alert-{{ 'danger' if alerte.type == 'down' else 'success' }} d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <strong>{{ alerte.timestamp.strftime('%H:%M:%S') }}</strong> — {{ alerte.message }}
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" 
+                                onclick="marquerLue({{ alerte.id }})">✓</button>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Liste des équipements -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">📋 Équipements</h5>
+                <button id="refreshBtn" class="btn btn-primary btn-sm">🔄 Vérifier maintenant</button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>IP</th>
+                                <th>Type</th>
+                                <th>Emplacement</th>
+                                <th>Statut</th>
+                                <th>Temps réponse</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for equipement in equipements %}
+                            <tr>
+                                <td><strong>{{ equipement.nom }}</strong></td>
+                                <td><code>{{ equipement.adresse_ip }}</code></td>
+                                <td>{{ equipement.type or '-' }}</td>
+                                <td>{{ equipement.emplacement or '-' }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if equipement.actif else 'danger' }}">
+                                        {{ '🟢 En ligne' if equipement.actif else '🔴 Hors ligne' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if equipement.historiques and equipement.historiques[-1].disponible %}
+                                        <span class="badge bg-info">{{ equipement.historiques[-1].temps_reponse }} ms</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function marquerLue(alerteId) {
+        $.ajax({
+            url: '/api/alerte_lue/' + alerteId,
+            method: 'POST',
+            success: function() {
+                location.reload();
+            }
+        });
+    }
+    
+    function marquerToutesLues() {
+        $.ajax({
+            url: '/api/alertes_lues_toutes',
+            method: 'POST',
+            success: function() {
+                location.reload();
+            }
+        });
+    }
+    
+    $(document).ready(function() {
+        $('#refreshBtn').click(function() {
+            $(this).text('⏳ Vérification...');
+            $(this).prop('disabled', true);
+            
+            $.ajax({
+                url: '/api/ping_all',
+                method: 'POST',
+                success: function() {
+                    location.reload();
+                },
+                error: function() {
+                    alert('Erreur lors de la vérification');
+                    location.reload();
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
