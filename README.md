@@ -40,10 +40,76 @@ Application web de supervision réseau développée en \*\*Python/Flask\*\*. Ell
 
 \---
 
+## Screenshots
+
+### Tableau de bord
+![Dashboard](docs/screenshots/dashboard.png)
+
+*Vue d'ensemble avec statistiques en temps réel et état des équipements*
+
+### Historique des vérifications
+![Historique](docs/screenshots/historique.png)
+
+*Consultation de l'historique avec filtres par équipement et période*
+
+### Centre d'alertes
+![Alertes](docs/screenshots/alertes.png)
+
+*Notifications automatiques en cas de changement d'état*
+
+---
+
+## Comment ça marche
+
+### Le défi
+
+Dans les environnements d'entreprise, les pare-feux bloquent très souvent les requêtes **ICMP** (le ping classique). Résultat : les outils de supervision traditionnels croient que les équipements sont hors ligne, alors qu'ils fonctionnent parfaitement.
+
+### La solution
+
+Cette application implémente une **stratégie de fallback en cascade** qui teste 3 méthodes dans l'ordre :
+```
+1. Ping ICMP (1 sec timeout)
+├─ ✅ Réponse → EN LIGNE
+└─ ❌ Timeout ↓
+2. Connexion TCP port 443 (2 sec timeout)
+├─ ✅ Connecté → EN LIGNE
+└─ ❌ Échec ↓
+3. Connexion TCP port 80 (2 sec timeout)
+├─ ✅ Connecté → EN LIGNE
+└─ ❌ Échec → HORS LIGNE
+```
+
+**Résultat :** l'application détecte correctement les équipements même dans les réseaux les plus restrictifs (entreprises, universités, réseaux avec pare-feu strict).
+
+---
+
+## Structure du projet
+```
+supervision-reseau/
+├── app.py # Application Flask (routes + modèles)
+├── ping_service.py # Service de ping multicouche (ICMP + TCP)
+├── requirements.txt # Dépendances Python
+├── README.md
+│
+├── templates/ # Templates Jinja2
+│ ├── base.html # Layout commun
+│ ├── dashboard.html # Tableau de bord
+│ ├── historique.html # Historique
+│ └── alertes.html # Centre d'alertes
+│
+├── static/ # Assets statiques (CSS, JS)
+│
+├── docs/
+│ └── screenshots/ # Captures d'écran
+│
+└── instance/
+└── supervision.db # Base de données SQLite (auto-générée)
+```
+---
 
 
 \## Stack technique
-
 
 
 | Composant | Technologie |
@@ -62,63 +128,38 @@ Application web de supervision réseau développée en \*\*Python/Flask\*\*. Ell
 
 | \*\*Ping\*\* | `subprocess` (ICMP) + `socket` (TCP) |
 
-
-
 \---
 
+## Installation
 
+### Prérequis
 
-\## Installation
+- Python **3.10+**
+- pip
+- Git
 
-
-
-\### Prérequis
-
-\- Python 3.10+
-
-\- pip
-
-
-
-\### Étapes
-
-
+### Étapes
 
 ```bash
-
-\# 1. Cloner le projet
-
+# 1. Cloner le projet
 git clone https://github.com/A-SIDIKI/supervision-reseau.git
-
 cd supervision-reseau
 
-
-
-\# 2. Créer un environnement virtuel
-
+# 2. Créer un environnement virtuel
 python -m venv venv
 
+# Windows
+venv\Scripts\activate
 
-
-\# Windows
-
-venv\\Scripts\\activate
-
-
-
-\# Mac/Linux
-
+# Mac/Linux
 source venv/bin/activate
 
-
-
-\# 3. Installer les dépendances
-
+# 3. Installer les dépendances
 pip install -r requirements.txt
 
-
-
-\# 4. Lancer l'application
-
+# 4. Lancer l'application
 python app.py
+```
+
+L'application est accessible sur : **http://127.0.0.1:5000**
 
